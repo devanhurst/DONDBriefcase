@@ -1,31 +1,41 @@
 package com.devanhurst.dondbriefcase;
 
-import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
+
+import android.os.CountDownTimer;
 import android.os.Bundle;
 
 import android.view.SurfaceView;
 import android.view.View;
+
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.Button;
+
 import android.media.MediaPlayer;
-import android.view.View.OnClickListener;
+import android.media.SoundPool;
+import android.media.AudioManager;
 
 import com.devanhurst.dondbriefcase.motiondetection.MotionDetector;
 import com.devanhurst.dondbriefcase.motiondetection.MotionDetectorCallback;
-
+import com.devanhurst.dondbriefcase.swipe.OnSwipeTouchListener;
 import com.devanhurst.dondbriefcase.briefcase.*;
+
 
 public class MainActivity extends AppCompatActivity {
     private MotionDetector motionDetector;
-    private Integer gameId;
     private Case briefcase;
-    private Integer counter;
     private Button button;
+    private Value value;
+    public static TextView gameSelector;
+    public static Integer gameId = 0;
+    public static Boolean bgmEnabled = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_IMMERSIVE
@@ -38,43 +48,67 @@ public class MainActivity extends AppCompatActivity {
             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             | View.SYSTEM_UI_FLAG_FULLSCREEN);
 
-        setContentView(R.layout.activity_main);
+        briefcase = new Case(this.gameId);
+        gameSelector = findViewById(R.id.gameSelector);
+        gameSelector.setText("");
 
-        briefcase = new Case(1);
+        decorView.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()){
+            public void onSwipeRight() {
+                MainActivity.gameId++;
+                briefcase = new Case(MainActivity.gameId);
+                MainActivity.gameSelector.setText(briefcase.getGameName());
+            }
+            public void onSwipeLeft() {
+                MainActivity.bgmEnabled = !MainActivity.bgmEnabled;
+                briefcase = new Case(MainActivity.gameId);
+                Toast.makeText(getApplicationContext(), MainActivity.getBgmMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        value = briefcase.getRandomValue();
 
         button = findViewById(R.id.button);
+        button.setText(value.amount, Button.BufferType.SPANNABLE);
 
-        final MediaPlayer bgPlayer = MediaPlayer.create(getApplicationContext(), R.raw.offer);
-        bgPlayer.start();
+        final MediaPlayer bgPlayer = MediaPlayer.create(getApplicationContext(), briefcase.getBgm());
+        bgPlayer.setLooping(true);
+
+        if (bgmEnabled) {
+            bgPlayer.start();
+        }
+
+        final SoundPool soundPool = new SoundPool(2, AudioManager.STREAM_MUSIC, 0);
+        final int buildup = soundPool.load(getApplicationContext(), R.raw.buildup, 1);
+        final int reveal = soundPool.load(getApplicationContext(), value.sound, 1);
 
         motionDetector = new MotionDetector(this, (SurfaceView) findViewById(R.id.surfaceView));
         motionDetector.setMotionDetectorCallback(new MotionDetectorCallback() {
             @Override
             public void onMotionDetected() {
-                Value value = briefcase.getRandomValue();
-                button.setText(value.amount);
-                MediaPlayer mPlayer = MediaPlayer.create(getApplicationContext(), value.sound);
-                bgPlayer.stop();
-                mPlayer.start();
-            }
-
-            @Override
-            public void onNoMotion() {
-                // Change value inside the case
-                button.setText("???");
+                soundPool.play(buildup, 1, 1, 0, 0, 1);
+                new CountDownTimer(2500, 2500) {
+                    public void onTick(long m) { return; }
+                    public void onFinish() {
+                        soundPool.play(reveal, 1, 1, 0, 0, 1);
+                        bgPlayer.stop();
+                    }
+                }.start();
             }
         });
+
         ////// Config Options
-        motionDetector.setCheckInterval(500);
-        motionDetector.setLeniency(20);
-        motionDetector.setMinLuma(1000);
+        motionDetector.setCheckInterval(333);
+        motionDetector.setLeniency(10);
     }
 
     public void restartGame(View view) {
-        new CountDownTimer(5000, 1000) {
+        button.setText("GET READY");
+        new CountDownTimer(5000, 100) {
             public void onTick(long m) {
-                String secs = String.valueOf(m / 1000);
-                button.setText(secs);
+                if (m < 4000) {
+                    String secs = String.valueOf(m / 999);
+                    button.setText(secs);
+                }
             }
             public void onFinish() { recreate(); }
         }.start();
@@ -86,10 +120,18 @@ public class MainActivity extends AppCompatActivity {
         motionDetector.onResume();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        motionDetector.onPause();
+    public static String getBgmMessage() {
+        if (bgmEnabled) {
+            return "Music Enabled";
+        } else {
+            return "Music Disabled";
+        }
     }
+
+//    @Override
+//    protected void onPause() {
+//        super.onPause();
+//        motionDetector.onPause();
+//    }
 
 }

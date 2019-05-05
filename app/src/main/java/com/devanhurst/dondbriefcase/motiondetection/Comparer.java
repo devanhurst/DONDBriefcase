@@ -15,14 +15,14 @@ public class Comparer {
     private int yLeftOver;
     private int rowWidthInPix;
     private int colWidthInPix;
-    private int leniency;
+    private double leniency;
     private int debugMode; // 1: textual indication of change, 2: difference of
                            // factors
 
-    private int[][] variance = null;
+    private double[][] variance = null;
     private boolean different = false;
 
-    public Comparer(State s1, State s2, int xBoxes, int yBoxes, int leniency, int debug) {
+    public Comparer(State s1, State s2, int xBoxes, int yBoxes, double leniency, int debug) {
         this.state1 = s1;
         this.state2 = s2;
 
@@ -70,15 +70,15 @@ public class Comparer {
         if (s1.getWidth() != s2.getWidth() || s1.getHeight() != s2.getHeight()) return true;
 
         // Boxes
-        this.variance = new int[yBoxes][xBoxes];
+        this.variance = new double[yBoxes][xBoxes];
 
         // set to a different by default, if a change is found then flag
         // non-match
         boolean different = false;
         // loop through whole image and compare individual blocks of images
-        int b1 = 0;
-        int b2 = 0;
-        int diff = 0;
+        double b1 = 0;
+        double b2 = 0;
+        double diff = 0;
         for (int y = 0; y < yBoxes; y++) {
             for (int x = 0; x < xBoxes; x++) {
                 b1 = aggregateMapArea(state1.getMap(), x, y);
@@ -93,7 +93,7 @@ public class Comparer {
         return different;
     }
 
-    private int aggregateMapArea(int[] map, int xBox, int yBox) {
+    private double aggregateMapArea(int[] map, int xBox, int yBox) {
         if (map == null) throw new NullPointerException();
 
         int yPix = yPixelsPerBox;
@@ -104,7 +104,7 @@ public class Comparer {
         int rowOffset = (yBox * yPixelsPerBox * rowWidthInPix);
         int columnOffset = (xBox * colWidthInPix);
 
-        int i = 0;
+        double i = 0;
         int iy = 0;
         for (int y = 0; y < yPix; y++) {
             iy = (y * (xBoxes * xPixelsPerBox)) - (y * (xPixelsPerBox - xLeftOver));
@@ -177,7 +177,7 @@ public class Comparer {
      * 
      * @return int representing the leniency.
      */
-    public int getLeniency() {
+    public double getLeniency() {
         return leniency;
     }
 
@@ -204,7 +204,7 @@ public class Comparer {
      */
     @Override
     public String toString() {
-        int diff = 0;
+        double diff = 0;
         StringBuilder output = new StringBuilder();
         for (int y = 0; y < yBoxes; y++) {
             output.append('|');

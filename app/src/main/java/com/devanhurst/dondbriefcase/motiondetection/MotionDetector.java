@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import android.os.CountDownTimer;
 
 public class MotionDetector {
     class MotionDetectorThread extends Thread {
@@ -29,32 +28,32 @@ public class MotionDetector {
                 long now = System.currentTimeMillis();
                 if (now-lastCheck > checkInterval) {
                     lastCheck = now;
-                    if (nextData.get() != null && timeout == 0) {
+                    if (nextData.get() != null) {
                         int[] img = ImageProcessing.decodeYUV420SPtoLuma(nextData.get(), nextWidth.get(), nextHeight.get());
 
                         if (detector.detect(img, nextWidth.get(), nextHeight.get())) {
-                            // check
-                            if (motionDetectorCallback != null) {
+                            detectFrames++;
+                            if (detectFrames > 2 && motionDetectorCallback != null) {
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
                                         motionDetectorCallback.onMotionDetected();
+                                        detectFrames = 0;
                                         onPause();
                                     }
                                 });
                             }
                         }
                     }
-                    if (timeout > 0) { timeout--; };
                 }
             }
         }
     }
 
     private final AggregateLumaMotionDetection detector;
-    private long checkInterval = 500;
+    private long checkInterval = 200;
     private long lastCheck = 0;
-    private int timeout = 10;
+    private int detectFrames = 0;
     private MotionDetectorCallback motionDetectorCallback;
     private Handler mHandler = new Handler();
 
@@ -94,7 +93,7 @@ public class MotionDetector {
         this.minLuma = minLuma;
     }
 
-    public void setLeniency(int l) {
+    public void setLeniency(double l) {
         detector.setLeniency(l);
     }
 
